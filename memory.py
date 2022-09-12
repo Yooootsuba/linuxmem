@@ -1,5 +1,9 @@
+import re
 import os
 import ctypes
+
+
+from .process import get_process_id_by_name
 
 
 buffers = {
@@ -23,13 +27,14 @@ libc = ctypes.CDLL('libc.so.6')
 
 class Memory:
 
-    def __init__(self, pid):
-        self.pid        = pid
-        self.mem_handle = self.get_mem_handle()
+    def __init__(self, process_name):
+        self.process_name = process_name
+        self.process_id   = get_process_id_by_name(process_name)
+        self.mem_handle   = self.get_mem_handle()
 
 
     def get_mem_handle(self):
-        return os.open(f'/proc/{self.pid}/mem', os.O_RDWR)
+        return os.open(f'/proc/{self.process_id}/mem', os.O_RDWR)
 
 
     def read(self, address, ctype):
@@ -52,3 +57,16 @@ class Memory:
             ctypes.sizeof(buffers[ctype]),
             ctypes.c_int64(address)
         )
+
+
+    def get_module_base_address(self, module_name):
+        pattern = f'([0-9a-f]+)-([0-9a-f]+)(.*{module_name}.*)'
+
+        with open(f'/proc/{self.process_id}/maps', 'r') as f:
+            for line in f.readlines():
+                if (match := re.match(pattern, line)) != None:
+                    return int(match.group(1), base = 16)
+
+
+    def get_base_address(self):
+        return self.get_module_base_address(self.process_name)
