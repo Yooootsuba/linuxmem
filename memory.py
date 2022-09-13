@@ -59,6 +59,13 @@ class Memory:
         )
 
 
+    def read_pointer(self, address, offsets, ctype = 'int64'):
+        for offset in offsets:
+            address = self.read(address + offset, ctype)
+
+        return address
+
+
     def get_module_base_address(self, module_name):
         pattern = f'([0-9a-f]+)-([0-9a-f]+)(.*{module_name}.*)'
 
